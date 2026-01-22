@@ -25,4 +25,4 @@ app.post('/openai', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`🟢 Прокси сервер запущен на порту ${port}`));
+app.listen(port, () => console.log(`Прокси сервер запущен на порту ${port}`));

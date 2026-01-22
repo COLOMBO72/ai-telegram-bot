@@ -3,10 +3,7 @@ import fetch from 'node-fetch';
 const PROXY_URL = 'https://ai-telegram-bot-production-2000.up.railway.app/openai';
 
 interface OpenAIChoice {
-  message?: {
-    role: string;
-    content: string;
-  };
+  message?: { role: string; content: string };
   text?: string;
 }
 
@@ -19,7 +16,18 @@ export async function generateAIResponse(prompt: string): Promise<string> {
   try {
     const body = {
       model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        {
+          role: 'system',
+          content: `
+Ты - эксперт по ИИ, современным трендам и маркетингу 2026 года. 
+Отвечай кратко, понятно и цепляюще.`,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
       temperature: 0.7,
     };
 
@@ -29,10 +37,7 @@ export async function generateAIResponse(prompt: string): Promise<string> {
       body: JSON.stringify(body),
     });
 
-    // 🔹 Здесь говорим TypeScript: "поверь, это OpenAIResponse"
     const data = (await response.json()) as OpenAIResponse;
-    console.log('OpenAI Response:', JSON.stringify(data, null, 2));
-
     const text =
       data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '🤷‍♂️ Пустой ответ';
 
