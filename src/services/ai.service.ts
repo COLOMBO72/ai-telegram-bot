@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const PROXY_URL = 'http://localhost:3000/openai';
+const PROXY_URL = 'https://ai-telegram-bot-production-2000.up.railway.app/openai';
 
 interface OpenAIChoice {
   message?: {
