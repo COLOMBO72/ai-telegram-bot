@@ -15,7 +15,7 @@ interface OpenAIResponse {
 export async function generateAIResponse(prompt: string): Promise<string> {
   try {
     const body = {
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'system',
