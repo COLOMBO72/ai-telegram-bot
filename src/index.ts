@@ -64,12 +64,6 @@ export async function generateAIResponse(prompt: string): Promise<string> {
 
 export async function generateImage(prompt: string): Promise<string> {
   try {
-    const body = {
-      model: 'gpt-image-1',
-      prompt,
-      size: '1024x1024',
-    };
-
     const response = await fetch(process.env.PROXY_IMAGE_URL!, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -81,6 +75,19 @@ export async function generateImage(prompt: string): Promise<string> {
     });
 
     const data = await response.json();
+
+    // 🔍 ЛОГ ДЛЯ ДИАГНОСТИКИ
+    console.log('🖼 Image response:', JSON.stringify(data, null, 2));
+
+    // ❌ Если OpenAI вернул ошибку
+    if (data.error) {
+      throw new Error(data.error.message || 'Ошибка генерации картинки');
+    }
+
+    // ❌ Если нет data или массив пустой
+    if (!Array.isArray(data.data) || !data.data[0]?.url) {
+      throw new Error('Пустой ответ от Image API');
+    }
 
     return data.data[0].url;
   } catch (error: any) {
