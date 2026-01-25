@@ -22,7 +22,7 @@ const client = new OpenAI({
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
-bot.start((ctx) => ctx.reply('Привет! Я ИИ-бот. Задай вопрос или /image <тема>.'));
+bot.start((ctx) => ctx.reply('Привет! Я ИИ-бот. Задай вопрос.'));
 
 const PROXY_URL = process.env.PROXY_URL2!;
 
@@ -63,17 +63,27 @@ export async function generateAIResponse(prompt: string): Promise<string> {
 
 export async function generateImage(prompt: string): Promise<string> {
   try {
-    const result = await client.images.generate({
+    const body = {
       model: 'gpt-image-1',
       prompt,
       size: '1024x1024',
+    };
+
+    const response = await fetch(PROXY_URL + '/images', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
 
-    if (!result.data?.length || !result.data[0].url) {
+    const data = await response.json();
+
+    if (!data.data?.[0]?.url) {
       throw new Error('Image generation failed');
     }
 
-    return result.data[0].url!;
+    return data.data[0].url;
   } catch (error: any) {
     console.error('generateImage error:', error);
     return `⚠️ Ошибка генерации картинки: ${error.message}`;
