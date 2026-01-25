@@ -25,6 +25,7 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 bot.start((ctx) => ctx.reply('Привет! Я ИИ-бот. Задай вопрос.'));
 
 const PROXY_URL = process.env.PROXY_URL2!;
+const PROXY_IMAGE_URL = process.env.PROXY_IMAGE_URL;
 
 export async function generateAIResponse(prompt: string): Promise<string> {
   try {
@@ -69,19 +70,17 @@ export async function generateImage(prompt: string): Promise<string> {
       size: '1024x1024',
     };
 
-    const response = await fetch(PROXY_URL + '/images', {
+    const response = await fetch(process.env.PROXY_IMAGE_URL!, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-image-1',
+        prompt,
+        size: '1024x1024',
+      }),
     });
 
     const data = await response.json();
-
-    if (!data.data?.[0]?.url) {
-      throw new Error('Image generation failed');
-    }
 
     return data.data[0].url;
   } catch (error: any) {

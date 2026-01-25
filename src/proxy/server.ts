@@ -35,11 +35,17 @@ app.post('/images', async (req, res) => {
       body: JSON.stringify(req.body),
     });
 
-    const data = await response.json();
-    res.json(data);
+    const text = await response.text(); // читаем ОДИН раз
+
+    if (!response.ok) {
+      console.error('❌ OpenAI image error:', text);
+      return res.status(response.status).send(text);
+    }
+
+    res.setHeader('Content-Type', 'application/json').send(text); // отдаём как есть
   } catch (err) {
-    console.error('❌ Image proxy error:', err);
-    res.status(500).json({ error: 'Image proxy failed' });
+    console.error('❌ Прокси /images ошибка:', err);
+    res.status(500).json({ error: 'Проблема на прокси (images)' });
   }
 });
 
