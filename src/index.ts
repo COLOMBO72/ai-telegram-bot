@@ -1,33 +1,103 @@
 import 'dotenv/config';
+import './proxy'; // прокси подключаем первым, если нужен
+import OpenAI from 'openai';
 import { Telegraf } from 'telegraf';
-import { generateAIResponse } from './services/ai.service';
 
-const bot = new Telegraf(process.env.BOT_TOKEN!);
+interface OpenAIChoice {
+  message?: {
+    role: string;
+    content: string;
+  };
+  text?: string;
+}
 
-const userLimits = new Map<number, number>();
-const FREE_LIMIT = 5;
+interface OpenAIResponse {
+  choices?: OpenAIChoice[];
+  [key: string]: any;
+}
 
-bot.start((ctx) => ctx.reply('Привет! Задавай свой вопрос.'));
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
+
+const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
+
+bot.start((ctx) => ctx.reply('Привет! Я ИИ-бот. Задай вопрос или /image <тема>.'));
+
+const PROXY_URL = process.env.PROXY_URL2!;
+
+export async function generateAIResponse(prompt: string): Promise<string> {
+  try {
+    const body = {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `
+Ты - эксперт. Отвечай кратко, понятно и цепляюще. Ответ должен быть не больше 4000 символов`,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.7,
+    };
+
+    const response = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = (await response.json()) as OpenAIResponse;
+    const text =
+      data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '🤷‍♂️ Пустой ответ';
+
+    return text;
+  } catch (err) {
+    console.error('❌ Ошибка generateAIResponse:', err);
+    return '⚠️ Ошибка при генерации ответа';
+  }
+}
+
+export async function generateImage(prompt: string): Promise<string> {
+  try {
+    const result = await client.images.generate({
+      model: 'gpt-image-1',
+      prompt,
+      size: '1024x1024',
+    });
+
+    if (!result.data?.length || !result.data[0].url) {
+      throw new Error('Image generation failed');
+    }
+
+    return result.data[0].url!;
+  } catch (error: any) {
+    console.error('generateImage error:', error);
+    return `⚠️ Ошибка генерации картинки: ${error.message}`;
+  }
+}
 
 bot.on('text', async (ctx) => {
-  const userId = ctx.from.id;
-  const used = userLimits.get(userId) || 0;
-
-  if (used >= FREE_LIMIT) {
-    return ctx.reply('Рад был помочь, но чтобы мог тебе помогать качественнее - нужна подписка.');
-  }
-
-  userLimits.set(userId, used + 1);
-  await ctx.reply('Думаю...');
-
+  const text = ctx.message.text;
   try {
-    const aiResponse = await generateAIResponse(ctx.message.text);
-    await ctx.reply(aiResponse);
-  } catch (err) {
-    console.error(err);
-    await ctx.reply('Ошибка при генерации ответа');
+    if (text.toLowerCase().startsWith('/image')) {
+      const prompt = text.replace('/image', '').trim();
+      const url = await generateImage(prompt);
+      await ctx.reply(url);
+      console.log(`Картинка отправлена`);
+    } else {
+      const reply = await generateAIResponse(text);
+      await ctx.reply(reply);
+      console.log(`Отвечает gpt-4o-mini`);
+    }
+  } catch (error: any) {
+    console.error('Bot error:', error);
+    await ctx.reply(`⚠️ Ошибка: ${error.message}`);
   }
 });
 
 bot.launch();
-console.log('Бот запущен');
+console.log('🤖 Бот запущен!');
